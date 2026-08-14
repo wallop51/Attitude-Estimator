@@ -31,8 +31,18 @@ HAL_StatusTypeDef MPU6050_Init(void) {
         return HAL_ERROR; // Failed to wake
     }
 
-
-    
+    // enable interrupts
+    status = HAL_I2C_Mem_Write(
+        &hi2c1, MPU6050_ADDR << 1,
+        MPU6050_INT_ENABLE,
+        I2C_MEMADD_SIZE_8BIT,
+        (uint8_t)0x01, // Enable data ready interrupt
+        1,
+        HAL_MAX_DELAY
+    );
+    if (status != HAL_OK) {
+        return HAL_ERROR; // Failed to enable interrupts
+    }
 
     return HAL_OK;
 }
