@@ -117,13 +117,13 @@ int main(void)
   while (1)
   {
     if (MPU6050_Read_Accel(&accel_x, &accel_y, &accel_z) == HAL_OK) {
-      snprintf(accel_message, sizeof(accel_message), "Accel: %d, %d, %d | ", accel_x, accel_y, accel_z);
+      snprintf(accel_message, sizeof(accel_message), "%d,%d,%d,", accel_x, accel_y, accel_z);
     } else {
       Telemetry_Print("Failed to read accelerometer data\r\n");
     }
 
     if (MPU6050_Read_Gyro(&gyro_x, &gyro_y, &gyro_z) == HAL_OK) {
-      snprintf(gyro_message, sizeof(gyro_message), "Gyro: %d, %d, %d", gyro_x, gyro_y, gyro_z);
+      snprintf(gyro_message, sizeof(gyro_message), "%d,%d,%d,", gyro_x, gyro_y, gyro_z);
     } else {
       Telemetry_Print("Failed to read gyroscope data\r\n");
     }
@@ -134,7 +134,7 @@ int main(void)
 
     HAL_Delay(500);
     /* USER CODE END WHILE */
-    
+
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
@@ -279,6 +279,12 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(B1_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : PA1 */
+  GPIO_InitStruct.Pin = GPIO_PIN_1;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
   /*Configure GPIO pin : LD2_Pin */
   GPIO_InitStruct.Pin = LD2_Pin;
