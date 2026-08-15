@@ -48,6 +48,10 @@ I2C_HandleTypeDef hi2c1;
 
 UART_HandleTypeDef huart2;
 
+volatile uint32_t imu_interrupt_count = 0;
+
+volatile uint8_t data_ready_flag = 0; // Flag to indicate data ready interrupt
+
 /* USER CODE BEGIN PV */
 
 /* USER CODE END PV */
@@ -58,12 +62,36 @@ static void MX_GPIO_Init(void);
 static void MX_I2C1_Init(void);
 static void MX_USART2_UART_Init(void);
 /* USER CODE BEGIN PFP */
-
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin);
+void Fetch_And_Send_IMU_Data(void);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+void Fetch_And_Send_IMU_Data(void) {
+    int16_t accel_x, accel_y, accel_z;
+    int16_t gyro_x, gyro_y, gyro_z;
+    char accel_message[100];
+    char gyro_message[100];
 
+    if (MPU6050_Read_Accel(&accel_x, &accel_y, &accel_z) == HAL_OK) {
+        snprintf(accel_message, sizeof(accel_message), "%d,%d,%d,", accel_x, accel_y, accel_z);
+    } else {
+        Telemetry_Print("Failed to read accelerometer data\r\n");
+        return;
+    }
+
+    if (MPU6050_Read_Gyro(&gyro_x, &gyro_y, &gyro_z) == HAL_OK) {
+        snprintf(gyro_message, sizeof(gyro_message), "%d,%d,%d", gyro_x, gyro_y, gyro_z);
+    } else {
+        Telemetry_Print("Failed to read gyroscope data\r\n");
+        return;
+    }
+
+    Telemetry_Print(accel_message);
+    Telemetry_Print(gyro_message);
+    Telemetry_Print("\r\n");
+}
 /* USER CODE END 0 */
 
 /**
@@ -98,6 +126,7 @@ int main(void)
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
 
+  // Initialize the MPU6050
   if (MPU6050_Init() == HAL_OK) {
       Telemetry_Print("MPU6050 initialized successfully\r\n");
       HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_SET); // Turn on LED
@@ -106,33 +135,17 @@ int main(void)
       HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET); // Turn off LED
   }
 
-  int16_t accel_x, accel_y, accel_z;
-  int16_t gyro_x, gyro_y, gyro_z;
-  char accel_message[100];
-  char gyro_message[100];
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-    if (MPU6050_Read_Accel(&accel_x, &accel_y, &accel_z) == HAL_OK) {
-      snprintf(accel_message, sizeof(accel_message), "%d,%d,%d,", accel_x, accel_y, accel_z);
-    } else {
-      Telemetry_Print("Failed to read accelerometer data\r\n");
+    if (data_ready_flag) {
+      data_ready_flag = 0;
+
+      Fetch_And_Send_IMU_Data();
     }
-
-    if (MPU6050_Read_Gyro(&gyro_x, &gyro_y, &gyro_z) == HAL_OK) {
-      snprintf(gyro_message, sizeof(gyro_message), "%d,%d,%d,", gyro_x, gyro_y, gyro_z);
-    } else {
-      Telemetry_Print("Failed to read gyroscope data\r\n");
-    }
-
-    Telemetry_Print(accel_message);
-    Telemetry_Print(gyro_message);
-    Telemetry_Print("\r\n");
-
-    HAL_Delay(500);
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -303,7 +316,12 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
+    if (GPIO_Pin == GPIO_PIN_1) {
+        // Handle the interrupt triggered by PA1
+        data_ready_flag = 1; 
+    }
+}
 /* USER CODE END 4 */
 
 /**
