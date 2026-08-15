@@ -18,11 +18,13 @@ HAL_StatusTypeDef MPU6050_Init(void) {
         return HAL_ERROR; // Communication failed or wrong ID
     }
 
+    uint8_t pwr = 0x00;
+
     status = HAL_I2C_Mem_Write(
         &hi2c1, MPU6050_ADDR << 1,
         MPU6050_PWR_MGMT_1,
         I2C_MEMADD_SIZE_8BIT,
-        (uint8_t)0x00, // Set to zero to wake up the MPU6050
+        &pwr, // Set to zero to wake up the MPU6050
         1,
         HAL_MAX_DELAY
     );
@@ -32,11 +34,12 @@ HAL_StatusTypeDef MPU6050_Init(void) {
     }
 
     // enable interrupts
+    uint8_t int_enable = 0x01;
     status = HAL_I2C_Mem_Write(
         &hi2c1, MPU6050_ADDR << 1,
         MPU6050_INT_ENABLE,
         I2C_MEMADD_SIZE_8BIT,
-        (uint8_t)0x01, // Enable data ready interrupt
+        &int_enable, // Enable data ready interrupt
         1,
         HAL_MAX_DELAY
     );
@@ -44,6 +47,37 @@ HAL_StatusTypeDef MPU6050_Init(void) {
         return HAL_ERROR; // Failed to enable interrupts
     }
 
+    // enable DLPF at 98Hz (gyro) / 94Hz (accel)
+    /* 
+    Gyro sample output rate becomes 1kHz. 98Hz/94Hz bandwidth is a middleground between noise filtering and response time while
+    avoiding attenuating movements we want to measure (for this project, movements are unlikely to be faster than 98Hz/94Hz).
+    */
+    uint8_t config = 0x02;
+    status = HAL_I2C_Mem_Write(
+        &hi2c1, MPU6050_ADDR << 1,
+        MPU6050_CONFIG,
+        I2C_MEMADD_SIZE_8BIT,
+        &config, // Set DLPF to 98Hz/94Hz
+        1,
+        HAL_MAX_DELAY
+    );
+    if (status != HAL_OK) {
+        return HAL_ERROR; // Failed to set DLPF
+    }
+
+    // set sample rate divider ot 9 -> sample rate = gyro output rate / (1 + SMPLRT_DIV) = 1kHz / (1 + 9) = 100Hz
+    uint8_t smplrt_div = 0x09;
+    status = HAL_I2C_Mem_Write(
+        &hi2c1, MPU6050_ADDR << 1,
+        MPU6050_SMPLRT_DIV,
+        I2C_MEMADD_SIZE_8BIT,
+        &smplrt_div, // Set sample rate divider to 9
+        1,
+        HAL_MAX_DELAY
+    );
+    if (status != HAL_OK) {
+        return HAL_ERROR; // Failed to set sample rate divider
+    }
     return HAL_OK;
 }
 
