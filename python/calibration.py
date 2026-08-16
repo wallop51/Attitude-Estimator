@@ -1,10 +1,17 @@
-import serial, time
+import serial
 
-try:
-    s = serial.Serial('COM3', 9600) 
-except serial.SerialException:
-    print("Error: Could not open serial port. Please check the connection and try again.")
-    exit()
+SAMPLES_TO_COLLECT = 500
+
+def open_com_port():
+    global s
+    port = "COM"
+    port += input("Which serial port is being used? : ") #### TODO : make this safe
+
+    try:
+        s = serial.Serial(port, 9600) 
+    except serial.SerialException:
+        print("Error: Could not open serial port. Please check the connection and try again.")
+        open_com_port()
 
 ORIENTATIONS = ['X', 'Y', 'Z']
 
@@ -29,18 +36,20 @@ def collect_samples(n):
         print(f"Invalid sample received: {line}. Waiting for valid data...\n")
         line = s.readline().decode().strip().split(',')
 
-    sample = [int(x) for x in line] # sample = [accel_x, accel_y, accel_z, gyro_x, gyro_y, gyro_z]
     
     samples = []
-    for _ in range(n):
-        print(f"\rCollecting samples {len(samples)}/{n}", end="")
-        line = s.readline().decode().strip().split(',') # returns a list of values as strings (i.e. ['16856', '-216', '-938', '-419', '158', '11'])
-        sample = [int(x) for x in line] # sample = [accel_x, accel_y, accel_z, gyro_x, gyro_y, gyro_z]
-        if not is_valid_line(line):
-            print(f"\rInvalid sample received: {line}. Waiting for valid data...", end="")
-            continue
-        samples.append(sample)
+    while len(samples) != n:
 
+        line = s.readline().decode().strip().split(',') # returns a list of values as strings (i.e. ['16856', '-216', '-938', '-419', '158', '11'])
+
+        if not is_valid_line(line): # check the line is in the format we expect, otherwise skip it.
+            continue
+
+        sample = [int(x) for x in line] # sample = [accel_x, accel_y, accel_z, gyro_x, gyro_y, gyro_z]
+                
+        samples.append(sample)
+        print(f"\rCollecting samples {len(samples)}/{n}   |   Current sample: {sample}                               ", end="")
+        
     print("\n")
     return samples
 
@@ -57,13 +66,26 @@ def calculate_offset_and_scale(accel_averages):
     print("Accel Offsets:", accel_offsets)
     print("Accel Scales:", accel_scales)
 
+def construct_output_string(biases, offsets, scales):
+    output = ""
+    for bias in biases:
+        output += str(bias) + ","
+    for offset in offsets:
+        output += str(offset) + ","
+    for scale in scales:
+        output += str(scale) + ","
+
+    return output
+
+
 if __name__ == "__main__":
+    open_com_port()
 
     # 1 calculate gyro bias for each axis
     print("Keep the IMU stationary")
     input("Press Enter to start collecting samples for gyro bias calculation")
     print("Collecting samples...")
-    samples = collect_samples(1000)
+    samples = collect_samples(SAMPLES_TO_COLLECT)
 
     # Calculate gyro bias for each axis (gyro_x, gyro_y, gyro_z)
     for i in range(3, 6):  # Indices 3, 4, 5 correspond to gyro_x, gyro_y, gyro_z
@@ -75,7 +97,7 @@ if __name__ == "__main__":
         for i in range(2): # 0 for +ve, 1 for -ve
             input(f"Place the IMU with {"+" if i == 0 else "-"}{orientation} axis facing up and press Enter to start collecting samples")
             print("Collecting samples...")
-            samples = collect_samples(1000)
+            samples = collect_samples(SAMPLES_TO_COLLECT)
 
             # calculate average accel for current orientation
             if orientation == 'X':
@@ -87,8 +109,8 @@ if __name__ == "__main__":
 
     calculate_offset_and_scale(accel_averages)
 
-    print("Acceleration offsets: ", accel_offsets)
-    print("Acceleration scales: ", accel_scales)
+    with open("calibration_results.csv", "w") as f:
+        f.write(construct_output_string(gyro_bias, accel_offsets, accel_scales))
 
 # FIRST SET OF RESULTS:
 #Gyro Bias: [-405.025, 159.359, 18.535]
