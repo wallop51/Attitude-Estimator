@@ -1,6 +1,22 @@
+"""
+IMU calibration tool.
+
+Basic calibration accounting for gyroscope bias and
+accelerometer offset and scaling
+
+Expects raw MPU6050 samples over UART in the format:
+ax,ay,az,gx,gy,gz
+
+This tool is intended for sensor calibration only.
+The STM32 runtime telemetry format will change once
+attitude estimation is moved onto the STM32.
+"""
+
 import serial
 
 SAMPLES_TO_COLLECT = 500
+
+BAUD_RATE = 115200
 
 def open_com_port():
     global s
@@ -8,7 +24,7 @@ def open_com_port():
     port += input("Which serial port is being used? : ") #### TODO : make this safe
 
     try:
-        s = serial.Serial(port, 9600) 
+        s = serial.Serial(port, BAUD_RATE) 
     except serial.SerialException:
         print("Error: Could not open serial port. Please check the connection and try again.")
         open_com_port()
