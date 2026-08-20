@@ -1,9 +1,12 @@
-import serial, time
+import serial, time, math
+import quaternion as q
 
 BAUD_RATE = 115200
 params = []
-current_angle = [0,0,0]
-dt = 0.01 # dt @ 100Hz
+current_angle_gyro = [0,0,0]
+pitch_accel = 0
+roll_accel = 0
+
 
 def get_calibration_parameters():
     try:
@@ -46,20 +49,25 @@ def calibrate_sample(sample):
     gyros = sample[3:] # [gyro_x, gyro_y, gryo_z]
     for i in range(3):
         # apply offset and scale to each accel value
-        accels[i] = (accels[i] - params[3 + i]) * params[6 + i] # params[3+i] is offset, params[6+i] is scale
+        accels[i] = ((accels[i] - params[3 + i]) * params[6 + i]) / 16384 # params[3+i] is offset, params[6+i] is scale
         gyros[i] = (gyros[i] - params[i]) / 131 # params[i] is gyro bias, 131 is conversion factor from raw to dps
 
     return accels + gyros
 
 def display_sample(sample):
     print(f"ax = {sample[0]:6.0f} ay = {sample[1]:6.0f} az = {sample[2]:6.0f} gx = {sample[3]:6.0f} gy = {sample[4]:6.0f} gz = {sample[5]:6.0f}")
-    print(f"angles: {current_angle[0]:4.0f}, {current_angle[1]:4.0f}, {current_angle[2]:4.0f}, ")
+    print(f"gyro angles: {current_angle_gyro[0]:4.0f}, {current_angle_gyro[1]:4.0f}, {current_angle_gyro[2]:4.0f}, accel angles: roll = {roll_accel:4.0f}, pitch = {pitch_accel:4.0f}")
     print("\033[2A", end="")
 
 def calculate_angle_delta(sample, dt): # takes a calibrated and converted sample (units dps)
     omega = sample[3:]
     for i in range(3):
-        current_angle[i] += omega[i] * dt
+        current_angle_gyro[i] += omega[i] * dt
+
+    global roll_accel, pitch_accel
+    accels = sample[:3]
+    roll_accel = math.degrees(math.atan2(accels[2],accels[0])) # roll = atan2(az,ax)
+    pitch_accel = math.degrees(math.atan2(accels[1], math.sqrt(accels[0]**2 + accels[2]**2))) # pitch = atan2(-ay, sqrt(ax^2 + az^2))
 
 
 
