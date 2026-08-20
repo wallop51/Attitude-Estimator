@@ -49,3 +49,25 @@ def normalise(v): # normalise a 3d vector
     for i in range(len(v)):
         vn[i] = v[i] / magnitude
     return vn
+
+def quaternion_to_euler(q): ### CONVENTIONS FOR THIS PROJECT : Rotation about X = yaw, rotation about Y = roll, rotation about Z = pitch
+    yaw = -math.atan2(
+        2 * (q.w * q.x + q.y * q.z),
+        1 - 2 * (q.x**2 + q.y**2)
+    )
+
+    value = 2 * (q.w * q.y - q.z * q.x)
+    value = max(-1.0, min(1.0, value))
+
+    roll = math.asin(value)
+
+    pitch = -math.atan2(
+        2 * (q.w * q.z + q.x * q.y),
+        1 - 2 * (q.y**2 + q.z**2)
+    )
+
+    return [
+        math.degrees(pitch),
+        math.degrees(yaw),
+        math.degrees(roll)
+    ]
