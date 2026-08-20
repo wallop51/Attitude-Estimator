@@ -3,7 +3,7 @@ import quaternion as q
 
 BAUD_RATE = 115200
 params = []
-current_angle_gyro = [0,0,0]
+current_q = q.Quaternion(1,0,0,0) # initialise current quaternion as zero rotation
 pitch_accel = 0
 roll_accel = 0
 
@@ -55,20 +55,24 @@ def calibrate_sample(sample):
     return accels + gyros
 
 def display_sample(sample):
-    print(f"ax = {sample[0]:6.0f} ay = {sample[1]:6.0f} az = {sample[2]:6.0f} gx = {sample[3]:6.0f} gy = {sample[4]:6.0f} gz = {sample[5]:6.0f}")
-    print(f"gyro angles: {current_angle_gyro[0]:4.0f}, {current_angle_gyro[1]:4.0f}, {current_angle_gyro[2]:4.0f}, accel angles: roll = {roll_accel:4.0f}, pitch = {pitch_accel:4.0f}")
+    current_angle = q.quaternion_to_euler(current_q)
+    print(f"ax = {sample[0]:2.3f} ay = {sample[1]:2.3f} az = {sample[2]:2.3f} gx = {sample[3]:2.3f} gy = {sample[4]:6.0f} gz = {sample[5]:6.0f}")
+    print(f"gyro angles: PITCH {current_angle[0]:4.0f}, YAW {current_angle[1]:4.0f}, ROLL {current_angle[2]:4.0f}")
     print("\033[2A", end="")
 
-def calculate_angle_delta(sample, dt): # takes a calibrated and converted sample (units dps)
-    omega = sample[3:]
+def calculate_angle_delta(sample, dt): # takes a calibrated and converted sample (units dps, g)
+    gyros = sample[3:]
+    delta = [0,0,0]
     for i in range(3):
-        current_angle_gyro[i] += omega[i] * dt
+        delta[i] += math.radians(gyros[i] * dt)
 
-    global roll_accel, pitch_accel
-    accels = sample[:3]
-    roll_accel = math.degrees(math.atan2(accels[2],accels[0])) # roll = atan2(az,ax)
-    pitch_accel = math.degrees(math.atan2(accels[1], math.sqrt(accels[0]**2 + accels[2]**2))) # pitch = atan2(-ay, sqrt(ax^2 + az^2))
+    return delta
 
+def get_delta_quaternion(delta):
+    angle = q.mag(delta)
+    axis = q.normalise(delta)
+
+    return q.axis_angle_to_quaternion(axis, angle)
 
 
 if (__name__ == "__main__"):
@@ -84,5 +88,7 @@ if (__name__ == "__main__"):
             t0 = t1
 
             calibrated_sample = calibrate_sample(sample) 
-            calculate_angle_delta(calibrated_sample, dt)
+            delta = calculate_angle_delta(calibrated_sample, dt)
+            delta_q = get_delta_quaternion(delta)
+            current_q = q.mult(current_q, delta_q)
             display_sample(calibrated_sample)
