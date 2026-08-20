@@ -8,7 +8,7 @@ class Quaternion:
         self.z = z
 
     def __repr__(self):
-        return f"Quaternion(w={self.w}, x={self.x}, y={self.y}, z={self.z})"
+        return f"Quaternion(w={self.w:1.3f}, x={self.x:1.3f}, y={self.y:1.3f}, z={self.z:1.3f})"
 
 def mult(q1, q2): # multiply 2 quaternions
     q3 = Quaternion(0, 0, 0, 0)
@@ -32,12 +32,13 @@ def axis_angle_to_quaternion(axis, angle): # expects axis as a unit vector
 def conj(q): # conjugate
     return Quaternion(q.w, -q.x, -q.y, -q.z)
 
-def rotate_vector(q, v): # v' = qvq*; v expected as a 3d vector [x,y,z]
+def apply_rotation(q, v): # v' = qvq*; v expected as a 3d vector [x,y,z]
     v_q = Quaternion(0, v[0], v[1], v[2])
     return mult(mult(q,v_q), conj(q))
 
 def mag(v): # return magnitude of a 3d vector
     return math.sqrt(v[0]**2 + v[1]**2 + v[2]**2)
+
 
 def normalise(v): # normalise a 3d vector
     magnitude = mag(v)
@@ -70,4 +71,15 @@ def quaternion_to_euler(q): ### CONVENTIONS FOR THIS PROJECT : Rotation about X 
         math.degrees(pitch),
         math.degrees(yaw),
         math.degrees(roll)
+    ]
+
+def dot(v1, v2):
+    return v1[0] * v2[0] + v1[1] * v2[1] + v1[2] * v2[2]
+
+
+def cross(v1, v2):
+    return [
+        v1[1] * v2[2] - v1[2] * v2[1],
+        v1[2] * v2[0] - v1[0] * v2[2],
+        v1[0] * v2[1] - v1[1] * v2[0]
     ]

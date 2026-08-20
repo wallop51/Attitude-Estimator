@@ -1,11 +1,13 @@
 import serial, time, math
-import quaternion as q
+import quaternion as qt
 
 BAUD_RATE = 115200
 params = []
-current_q = q.Quaternion(1,0,0,0) # initialise current quaternion as zero rotation
+current_q = qt.Quaternion(1,0,0,0) # current estimated rotation
 pitch_accel = 0
 roll_accel = 0
+gravity_vector = [1,0,0] # measured gravity direction from accelerometer
+KP = 0.02
 
 
 def get_calibration_parameters():
@@ -54,14 +56,14 @@ def calibrate_sample(sample):
 
     return accels + gyros
 
+
 def display_sample(sample):
-    current_angle = q.quaternion_to_euler(current_q)
+    current_angle = qt.quaternion_to_euler(current_q)
     print(f"ax = {sample[0]:2.3f} ay = {sample[1]:2.3f} az = {sample[2]:2.3f} gx = {sample[3]:2.3f} gy = {sample[4]:6.0f} gz = {sample[5]:6.0f}")
-    print(f"gyro angles: PITCH {current_angle[0]:4.0f}, YAW {current_angle[1]:4.0f}, ROLL {current_angle[2]:4.0f}")
+    print(f"gyro angles: PITCH {current_angle[0]:4.0f}, YAW {current_angle[1]:4.0f}, ROLL {current_angle[2]:4.0f}, q = {current_q}")
     print("\033[2A", end="")
 
-def calculate_angle_delta(sample, dt): # takes a calibrated and converted sample (units dps, g)
-    gyros = sample[3:]
+def calculate_angle_delta(gyros, dt):
     delta = [0,0,0]
     for i in range(3):
         delta[i] += math.radians(gyros[i] * dt)
@@ -69,11 +71,15 @@ def calculate_angle_delta(sample, dt): # takes a calibrated and converted sample
     return delta
 
 def get_delta_quaternion(delta):
-    angle = q.mag(delta)
-    axis = q.normalise(delta)
+    angle = qt.mag(delta)
+    axis = qt.normalise(delta)
 
-    return q.axis_angle_to_quaternion(axis, angle)
+    return qt.axis_angle_to_quaternion(axis, angle)
 
+def get_predicted_gravity(current): # takes a current orientation and returns where gravity "should" according to the current orientation
+    world_gravity = [1,0,0]
+    predicted_gravity = qt.apply_rotation(current, world_gravity)
+    return [predicted_gravity.x, predicted_gravity.y, predicted_gravity.z]
 
 if (__name__ == "__main__"):
     open_com_port()
@@ -87,8 +93,19 @@ if (__name__ == "__main__"):
             dt = t1 - t0
             t0 = t1
 
-            calibrated_sample = calibrate_sample(sample) 
-            delta = calculate_angle_delta(calibrated_sample, dt)
+            calibrated_sample = calibrate_sample(sample)
+
+            accels = calibrated_sample[:3]
+            gyros = calibrated_sample[3:]
+
+            gravity_vector = qt.normalise(accels)
+            predicted_gravity = get_predicted_gravity(current_q)
+
+            error = qt.cross(predicted_gravity, gravity_vector)
+            corrected_gyros = [gyros[i] + KP * error[i] for i in range(3)]
+
+
+            delta = calculate_angle_delta(corrected_gyros, dt)
             delta_q = get_delta_quaternion(delta)
-            current_q = q.mult(current_q, delta_q)
+            current_q = qt.mult(current_q, delta_q)
             display_sample(calibrated_sample)
