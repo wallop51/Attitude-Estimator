@@ -1,3 +1,12 @@
+'''
+This file is a Python implementation of the attitude estimation algorithm.
+
+It was used to design, test, and understand the complete algorithm before
+implementing it in C on the STM32. Python is used here primarily because
+it allows the algorithm to be developed and debugged more easily while
+learning the underlying concepts.
+'''
+
 import serial, time, math
 import quaternion as qt
 
