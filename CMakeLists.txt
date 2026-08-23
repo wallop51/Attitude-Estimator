@@ -48,6 +48,8 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     Core/Src/main.c
     Core/Src/mpu6050.c
     Core/Src/telemetry.c
+    Core/Src/quaternion.c
+    Core/Src/vector3.c
 )
 
 # Add include paths
@@ -68,4 +70,9 @@ target_link_libraries(${CMAKE_PROJECT_NAME}
     stm32cubemx
 
     # Add user defined libraries
+)
+
+# Enable float support in printf/snprintf (needed for %f with newlib-nano)
+target_link_options(${CMAKE_PROJECT_NAME} PRIVATE
+    -u _printf_float
 )
