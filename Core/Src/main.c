@@ -44,10 +44,6 @@
 
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
-#define RAD_PER_DEG_MS (3.14159265f / 180000.0f)
-#define RAW_TO_DPS 131
-#define RAW_TO_G 16384
-#define KP 0.02f
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
@@ -55,16 +51,9 @@ I2C_HandleTypeDef hi2c1;
 
 UART_HandleTypeDef huart2;
 
-volatile uint32_t imu_interrupt_count = 0;
-
+/* USER CODE BEGIN PV */
 volatile uint8_t data_ready_flag = 0; // Flag to indicate data ready interrupt
 
-/* USER CODE BEGIN PV */
-
-// CALIBRATION PARAMETERS
-const Vector3 GYRO_BIAS = {-417.08f, 161.904f, 19.94f};
-const Vector3 ACCEL_OFFSET = {573.654f, -126.384f, 680.564f};
-const Vector3 ACCEL_SCALE = {1.008102f, 0.993418f, 0.989793f};
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -74,56 +63,11 @@ static void MX_I2C1_Init(void);
 static void MX_USART2_UART_Init(void);
 /* USER CODE BEGIN PFP */
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin);
-HAL_StatusTypeDef IMU_Read_Sample(Vector3_i *accel, Vector3_i *gyro);
-void Calibrate_Sample(Vector3_i *accel, Vector3_i* gyro, Vector3 *accel_calibrated, Vector3 *gryo_calibrated);
-void Apply_Error_Correction(Vector3 *v, Vector3 error);
-Quaternion Get_Delta_Quaternion(Vector3 gyros, uint32_t dt);
 void Send_Data(Quaternion data);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-HAL_StatusTypeDef IMU_Read_Sample(Vector3_i *accel, Vector3_i *gyro) {
-  HAL_StatusTypeDef status;
-
-  status = MPU6050_Read_Accel(&accel->x, &accel->y, &accel->z);
-  if (status != HAL_OK) return status;
-
-  status = MPU6050_Read_Gyro(&gyro->x, &gyro->y, &gyro->z);
-  if(status != HAL_OK) return status;
-
-  return HAL_OK;
-}
-
-void Calibrate_Sample(Vector3_i *accel, Vector3_i* gyro, Vector3 *accel_calibrated, Vector3 *gyro_calibrated) {
-  accel_calibrated->x = (accel->x - ACCEL_OFFSET.x) * ACCEL_SCALE.x / RAW_TO_G;
-  accel_calibrated->y = (accel->y - ACCEL_OFFSET.y) * ACCEL_SCALE.y / RAW_TO_G;
-  accel_calibrated->z = (accel->z - ACCEL_OFFSET.z) * ACCEL_SCALE.z / RAW_TO_G;
-
-  gyro_calibrated->x = (gyro->x - GYRO_BIAS.x) / RAW_TO_DPS;
-  gyro_calibrated->y = (gyro->y - GYRO_BIAS.y) / RAW_TO_DPS;
-  gyro_calibrated->z = (gyro->z - GYRO_BIAS.z) / RAW_TO_DPS;
-}
-
-void Apply_Error_Correction(Vector3 *v, Vector3 error) {
-  v->x += KP * error.x;
-  v->y += KP * error.y;
-  v->z += KP * error.z;
-}
-
-Quaternion Get_Delta_Quaternion(Vector3 gyros, uint32_t dt) {
-  Vector3 delta = {
-    gyros.x * dt * RAD_PER_DEG_MS,
-    gyros.y * dt * RAD_PER_DEG_MS,
-    gyros.z * dt * RAD_PER_DEG_MS
-  };
-
-  float angle = vector3_magnitude(delta);
-  Vector3 axis = vector3_normalise(delta);
-
-  return quaternion_from_axis_angle(axis, angle);
-}
-
 void Send_Data(Quaternion data) {
   char message[32];
   snprintf(message, sizeof(message), "%0.3f,%0.3f,%0.3f,%0.3f\r\n", data.w, data.x, data.y, data.z);
@@ -164,44 +108,21 @@ int main(void)
   /* USER CODE BEGIN 2 */
 
   // Initialize the MPU6050
-  if (MPU6050_Init() == HAL_OK) {
-      Telemetry_Print("MPU6050 initialized successfully\r\n");
+  if (mpu6050_init() == HAL_OK) {
+      telemetry_print("MPU6050 initialized successfully\r\n");
       HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_SET); // Turn on LED
   } else {
-      Telemetry_Print("Failed to initialize MPU6050\r\n");
+      telemetry_print("Failed to initialize MPU6050\r\n");
       HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET); // Turn off LED
   }
 
-  // INITIALISE T0
-  uint32_t t0 = HAL_GetTick();
-  uint32_t t1;
-  uint32_t dt;
-
-
-  // SET CURRENT Q = 1,0,0,0
+  // SET INITIAL Q = 1,0,0,0
   Quaternion current_attitude = {
     1.0f,
     0.0f,
     0.0f,
     0.0f
   };
-  // SET GRAVITY VECTOR = 1,0,0
-  Vector3 gravity_vector = {
-    1.0f,
-    0.0f,
-    0.0f
-  };
-
-  Vector3 predicted_gravity_vector;
-
-  Vector3_i accels_raw;
-  Vector3_i gyros_raw;
-
-  Vector3 accels;
-  Vector3 gyros;
-
-  Vector3 error;
-
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -211,24 +132,9 @@ int main(void)
     if (data_ready_flag) {
       data_ready_flag = 0;
 
-      if(IMU_Read_Sample(&accels_raw, &gyros_raw) != HAL_OK) {
-        continue;
+      if(attitude_update(&current_attitude) == HAL_OK) {
+        Send_Data(current_attitude);
       }
-
-      t1 = HAL_GetTick();
-      dt = t1 - t0;
-      t0 = t1;
-
-      Calibrate_Sample(&accels_raw, &gyros_raw, &accels, &gyros);
-
-      gravity_vector = vector3_normalise(accels);
-      predicted_gravity_vector = quaternion_apply_rotation(current_attitude, (Vector3){1.0f, 0.0f, 0.0f});
-
-      error = vector3_cross(predicted_gravity_vector, gravity_vector);
-      Apply_Error_Correction(&gyros, error);
-
-      current_attitude = quaternion_multiply(current_attitude, Get_Delta_Quaternion(gyros, dt));
-      Send_Data(current_attitude);
     }
     /* USER CODE END WHILE */
 

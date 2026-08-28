@@ -20,9 +20,9 @@
 
 extern I2C_HandleTypeDef hi2c1;
 
-HAL_StatusTypeDef MPU6050_Init(void);
+HAL_StatusTypeDef mpu6050_init(void);
 
-HAL_StatusTypeDef MPU6050_Read_Accel(int16_t* accel_x, int16_t* accel_y, int16_t* accel_z);
-HAL_StatusTypeDef MPU6050_Read_Gyro(int16_t* gyro_x, int16_t* gyro_y, int16_t* gyro_z);
+HAL_StatusTypeDef mpu6050_read_accel(int16_t* accel_x, int16_t* accel_y, int16_t* accel_z);
+HAL_StatusTypeDef mpu6050_read_gyro(int16_t* gyro_x, int16_t* gyro_y, int16_t* gyro_z);
 
 #endif

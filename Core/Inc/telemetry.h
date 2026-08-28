@@ -3,7 +3,7 @@
 
 #include "main.h"
 
-void Telemetry_Print(const char *message);
+void telemetry_print(const char *message);
 
 extern UART_HandleTypeDef huart2;
 

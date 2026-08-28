@@ -1,6 +1,6 @@
 #include "mpu6050.h"
 
-HAL_StatusTypeDef MPU6050_Init(void) {
+HAL_StatusTypeDef mpu6050_init(void) {
     uint8_t id;
     HAL_StatusTypeDef status;
 
@@ -81,7 +81,7 @@ HAL_StatusTypeDef MPU6050_Init(void) {
     return HAL_OK;
 }
 
-HAL_StatusTypeDef MPU6050_Read_Accel(int16_t* accel_x, int16_t* accel_y, int16_t* accel_z) {
+HAL_StatusTypeDef mpu6050_read_accel(int16_t* accel_x, int16_t* accel_y, int16_t* accel_z) {
 
     uint8_t buffer[6];
 
@@ -109,7 +109,7 @@ HAL_StatusTypeDef MPU6050_Read_Accel(int16_t* accel_x, int16_t* accel_y, int16_t
     return HAL_OK;
 }
 
-HAL_StatusTypeDef MPU6050_Read_Gyro(int16_t* gyro_x, int16_t* gyro_y, int16_t* gyro_z) {
+HAL_StatusTypeDef mpu6050_read_accel(int16_t* gyro_x, int16_t* gyro_y, int16_t* gyro_z) {
 
     uint8_t buffer[6];
 

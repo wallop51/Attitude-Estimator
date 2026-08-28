@@ -50,6 +50,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     Core/Src/telemetry.c
     Core/Src/quaternion.c
     Core/Src/vector3.c
+    Core/Src/attitude.c
 )
 
 # Add include paths
