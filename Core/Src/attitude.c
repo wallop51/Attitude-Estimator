@@ -7,7 +7,7 @@
 #define RAD_TO_DEG (180.0f / 3.14159265f)
 #define RAW_TO_DPS 131
 #define RAW_TO_G 16384
-#define KP 0.02f
+#define KP 0.4f
 
 /* CALIBRATION PARAMETERS 
 obtained from the output of calibration.py
@@ -17,7 +17,6 @@ const Vector3 GYRO_BIAS = {-417.08f, 161.904f, 19.94f};
 const Vector3 ACCEL_OFFSET = {573.654f, -126.384f, 680.564f};
 const Vector3 ACCEL_SCALE = {1.008102f, 0.993418f, 0.989793f};
 
-// Private function prototypes
 HAL_StatusTypeDef imu_read_sample(Vector3_i *accel, Vector3_i *gyro);
 
 void calibrate_sample(
@@ -70,22 +69,49 @@ HAL_StatusTypeDef imu_read_sample(Vector3_i *accel, Vector3_i *gyro) {
     return HAL_OK;
 }
 
-// called in main() for every sample
+/**
+ * @brief Reads the latest IMU sample and updates the attitude estimate quaternion using a Mahony-style complementary filter.
+ *
+ * Gyro data is integrated to estimate attitude, and accelerometer data (treated as a gravity vector) is used to correct accumulated drift in the roll/pitch axes.
+ * Yaw drift is not corrected, as the accelerometer does not provide information about yaw.
+ *
+ * @param current_attitude Pointer to the current attitude estimate quaternion (updated in place).
+ * @retval HAL status indicating success or failure of the update.
+ */
 HAL_StatusTypeDef attitude_update(Quaternion *current_attitude) {
     if(imu_read_sample(&accels_raw, &gyros_raw) != HAL_OK) {
         return HAL_ERROR; // failed to read sample
     }
 
-    t1 = HAL_GetTick(); // TODO: use timer
+    // track time since last update
+    // NOTE: HAL_GetTick() has 1ms resoltution, which is acceptable for the current
+    // 100Hz sample rate, but not for higher rates.
+    t1 = HAL_GetTick();
     dt = t1 - t0;
     t0 = t1;
 
+    // Convert raw sensor data to physical units (g and dps)
+    // and calibrate using calibration data obtained from calibration.py
     calibrate_sample(&accels_raw, &gyros_raw, &accels, &gyros);
+    
+    // measured gravity vector in the body frame from accelerometer
     gravity_vector = vector3_normalise(accels);
+
+    // Predicted gravity direction: rotate the world-frame "down" vector
+    // (1,0,0) into the body frame using the conjugate of the current
+    // attitude estimate. current_attitude maps body -> world,
+    // so its conjugate maps world -> body.
     current_attitude_conjugate = quaternion_conjugate(*current_attitude);
     predicted_gravity_vector = quaternion_apply_rotation(current_attitude_conjugate, (Vector3){1.0f, 0.0f, 0.0f});
     
+    // Error is the rotation axis (scaled by the sine of the angle) that
+    // would rotate the predicted gravity vector onto the measured gravity
+    // vector. NOTE: argument order matters here as cross product is anti-commutative.
+    // Swapping the order would flip the sign of the error vector causing the estimate
+    // to diverge instead of converge.
     error = vector3_cross(gravity_vector, predicted_gravity_vector);
+
+    // Apply a proportional correction; this implementation does not include an integral term.
     apply_error_correction(&gyros, error);
 
     *current_attitude = quaternion_multiply(*current_attitude, get_delta_quaternion(gyros, dt));
