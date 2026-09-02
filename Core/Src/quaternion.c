@@ -1,8 +1,6 @@
 #include "quaternion.h"
 #include <math.h>
 
-Quaternion quaternion_conjugate(Quaternion q);
-
 Quaternion quaternion_multiply(Quaternion q1, Quaternion q2) {
     Quaternion q3 = {
         q1.w * q2.w - q1.x * q2.x - q1.y * q2.y - q1.z * q2.z,

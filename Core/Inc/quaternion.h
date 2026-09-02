@@ -10,6 +10,7 @@ typedef struct {
     float z;
 } Quaternion;
 
+Quaternion quaternion_conjugate(Quaternion q);
 Quaternion quaternion_multiply(Quaternion q1, Quaternion q2);
 Quaternion quaternion_from_axis_angle(Vector3 axis, float angle);
 Vector3 quaternion_apply_rotation(Quaternion q, Vector3 v);

@@ -109,7 +109,7 @@ HAL_StatusTypeDef mpu6050_read_accel(int16_t* accel_x, int16_t* accel_y, int16_t
     return HAL_OK;
 }
 
-HAL_StatusTypeDef mpu6050_read_accel(int16_t* gyro_x, int16_t* gyro_y, int16_t* gyro_z) {
+HAL_StatusTypeDef mpu6050_read_gyro(int16_t* gyro_x, int16_t* gyro_y, int16_t* gyro_z) {
 
     uint8_t buffer[6];
 

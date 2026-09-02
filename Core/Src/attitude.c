@@ -4,6 +4,7 @@
 #include "vector3.h"
 
 #define RAD_PER_DEG_MS (3.14159265f / 180000.0f)
+#define RAD_TO_DEG (180.0f / 3.14159265f)
 #define RAW_TO_DPS 131
 #define RAW_TO_G 16384
 #define KP 0.02f
@@ -30,9 +31,13 @@ void apply_error_correction(Vector3 *v, Vector3 error);
 Quaternion get_delta_quaternion(Vector3 gyros, uint32_t dt);
 
 // INITIALISE TIMING
-uint32_t t0 = HAL_GetTick();
+uint32_t t0;
 uint32_t t1;
 uint32_t dt;
+
+void init_t0(void) {
+    t0 = HAL_GetTick();
+}
 
 // SET GRAVITY VECTOR = 1,0,0
 Vector3 gravity_vector = {
@@ -50,6 +55,8 @@ Vector3 accels;
 Vector3 gyros;
 
 Vector3 error;
+
+Quaternion current_attitude_conjugate;
 
 HAL_StatusTypeDef imu_read_sample(Vector3_i *accel, Vector3_i *gyro) {
     HAL_StatusTypeDef status;
@@ -75,9 +82,10 @@ HAL_StatusTypeDef attitude_update(Quaternion *current_attitude) {
 
     calibrate_sample(&accels_raw, &gyros_raw, &accels, &gyros);
     gravity_vector = vector3_normalise(accels);
-    predicted_gravity_vector = quaternion_apply_rotation(*current_attitude, (Vector3){1.0f, 0.0f, 0.0f});
+    current_attitude_conjugate = quaternion_conjugate(*current_attitude);
+    predicted_gravity_vector = quaternion_apply_rotation(current_attitude_conjugate, (Vector3){1.0f, 0.0f, 0.0f});
     
-    error = vector3_cross(predicted_gravity_vector, gravity_vector);
+    error = vector3_cross(gravity_vector, predicted_gravity_vector);
     apply_error_correction(&gyros, error);
 
     *current_attitude = quaternion_multiply(*current_attitude, get_delta_quaternion(gyros, dt));
@@ -100,9 +108,9 @@ Quaternion get_delta_quaternion(Vector3 gyros, uint32_t dt) {
 }
 
 void apply_error_correction(Vector3 *v, Vector3 error) {
-    v->x += KP * error.x;
-    v->y += KP * error.y;
-    v->z += KP * error.z;
+    v->x += KP * error.x * RAD_TO_DEG;
+    v->y += KP * error.y * RAD_TO_DEG;
+    v->z += KP * error.z * RAD_TO_DEG;
 }
 
 // calibrate each sample using calibration data obtained from calibration.py

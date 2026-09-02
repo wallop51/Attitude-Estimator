@@ -27,9 +27,9 @@
 #include "stm32f4xx_hal_def.h"
 #include "telemetry.h"
 #include "mpu6050.h"
-#include "stdio.h"
+#include <stdio.h>
+#include "attitude.h"
 #include "quaternion.h"
-#include "vector3.h"
 
 /* USER CODE END Includes */
 
@@ -71,7 +71,7 @@ void Send_Data(Quaternion data);
 void Send_Data(Quaternion data) {
   char message[32];
   snprintf(message, sizeof(message), "%0.3f,%0.3f,%0.3f,%0.3f\r\n", data.w, data.x, data.y, data.z);
-  Telemetry_Print(message);
+  telemetry_print(message);
 }
 /* USER CODE END 0 */
 
@@ -91,7 +91,7 @@ int main(void)
   HAL_Init();
 
   /* USER CODE BEGIN Init */
-
+  init_t0();
   /* USER CODE END Init */
 
   /* Configure the system clock */
