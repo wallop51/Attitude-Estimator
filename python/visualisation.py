@@ -1,5 +1,5 @@
-import threading
-import serial
+import threading, serial, sys
+import serial.tools.list_ports
 import quaternion as qt
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
@@ -9,16 +9,42 @@ BAUD_RATE = 115200
 latest_quaternion = qt.Quaternion(1, 0, 0, 0)
 lock = threading.Lock()
 
+def list_available_ports():
+    ports = serial.tools.list_ports.comports()
+    return [p.device for p in ports]
+
 def open_com_port():
     global s
-    port = "COM"
-    port += input("Which serial port is being used? : ")
+
+    # allow overriding via command line: python visualisation.py COM3
+    if len(sys.argv) > 1:
+        port = sys.argv[1]
+    else:
+        available = list_available_ports()
+        if not available:
+            print("No serial ports detected. Check the connection and try again.")
+            sys.exit(1)
+
+        if len(available) == 1:
+            port = available[0]
+            print(f"Auto-selected the only available port: {port}")
+        else:
+            print("Available ports:")
+            for i, p in enumerate(available):
+                print(f"  [{i}] {p}")
+            choice = input("Select a port number: ")
+            try:
+                port = available[int(choice)]
+            except (ValueError, IndexError):
+                print("Invalid selection.")
+                sys.exit(1)
 
     try:
         s = serial.Serial(port, BAUD_RATE)
+        print(f"Connected on {port}")
     except serial.SerialException:
-        print("Error: Could not open serial port. Please check the connection and try again.")
-        open_com_port()
+        print(f"Error: Could not open {port}. Check the connection and try again.")
+        sys.exit(1)
 
 def read_line():
     line = s.readline().decode().strip().split(',')
@@ -54,7 +80,7 @@ ax = fig.add_subplot(111, projection='3d')
 def to_display_coords(v):
     # v = [x, y, z] in the IMU's native frame (X=yaw axis, Y=roll axis, Z=pitch axis)
     # remap so the yaw axis (IMU X) is drawn as the plot's vertical (Z) axis
-    return [v[1], v[2], v[0]]
+    return [-v[1], -v[2], v[0]]
 
 def draw_triad(q):
     ax.cla()
