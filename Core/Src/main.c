@@ -68,11 +68,7 @@ void Send_Data(Quaternion data);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-void Send_Data(Quaternion data) {
-  char message[32];
-  snprintf(message, sizeof(message), "%0.3f,%0.3f,%0.3f,%0.3f\r\n", data.w, data.x, data.y, data.z);
-  telemetry_print(message);
-}
+
 /* USER CODE END 0 */
 
 /**
@@ -133,7 +129,7 @@ int main(void)
       data_ready_flag = 0;
 
       if(attitude_update(&current_attitude) == HAL_OK) {
-        Send_Data(current_attitude);
+        telemetry_send_quaternion(current_attitude);
       }
     }
     /* USER CODE END WHILE */
