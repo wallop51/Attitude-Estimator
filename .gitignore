@@ -1,7 +1,7 @@
 build
 mx.scratch
 !.settings
-__pycache__/
+python/__pycache__/
 *.pyc
 .vscode/
 tree.txt
