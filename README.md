@@ -38,46 +38,54 @@ Getting this right meant tracking down three separate, non-obvious bugs: the rot
 This project uses a simplified version of the Mahony filter. Raw sensor data is read from the IMU and calibrated giving acceleration and angular velocity vectors:
 
 $$
-\bold a = [a_x,a_y,a_z]\; (\text{g})\\
+\bold{a} = [a_x,a_y,a_z]\; (\text{g})\\
 \boldsymbol\omega = [\omega_x, \omega_y, \omega_z]\; (\degree/\text{s})
 $$
 
 The acceleration vector is normalised to give a unit vector pointing in the **measured** direction of gravity*
+
 $$
-\bold {\hat{g}}_m = \frac{\bold a }{||\bold a||}
+\bold {\hat{g}}_m = \frac{\bold{a}}{||\bold{a}||}
 $$
+
 **Note: This assumes linear acceleration due to the movement of the IMU is negligible compared to gravity* 
 
 The current attitude quaternion, $\bold q_k$, represents the rotation from the body frame to the world frame, and is used to calculate a **predicted** gravity vector based on the world down direction in the body frame:
+
 $$
-\bold{\hat{g}}_p = \bold q^*_k\otimes \bold{\hat{g}}_w  \otimes \bold q_k \\[10pt]
-\text {where }\bold {\hat{g}}_w= [1,0,0] \text{, the world down vector, and $\bold q ^*_k$ is the conjugate of $\bold q_k$}
+\bold{\hat{g}}_p = \bold{q}^*_k\otimes \bold{\hat{g}}_w  \otimes \bold{q}_k \\[10pt]
+\text {where }\bold {\hat{g}}_w= [1,0,0] \text{, the world down vector, and $\bold{q} ^*_k$ is the conjugate of $\bold{q}_k$}
 $$
 
 The error is then simply the cross product of the measured and predicted gravity vectors:
+
 $$
-\bold e = \bold{\hat{g}}_m\times\bold{\hat{g}}_p
+\bold{e} = \bold{\hat{g}}_m\times\bold{\hat{g}}_p
 $$
+
 Its direction represents the axis of rotation between the two vectors, while its magnitude is proportional to the sine of the angular error.
 
 The error is scaled by $\dfrac {180} \pi$ so that the proportional correction is expressed on the same angular scale as the gyro measurements:
+
 $$
-\boldsymbol\omega_{\text{corrected}} = \boldsymbol\omega + K_p\frac{180}{\pi}\bold e
+\boldsymbol{\omega}_{\text{corrected}} = \boldsymbol{\omega} + K_p\frac{180}{\pi}\bold{e}
 $$
 
 
-The corrected gyro measurements are integrated and used to construct the delta quaternion $\delta \bold q$.
+The corrected gyro measurements are integrated and used to construct the delta quaternion $\delta \bold{q}$.
 $\text{d}t$ is converted from $\text{ms}$ to $\text{s}$
+
 $$
-\delta\boldsymbol{\theta} = \text{d}t\frac{\pi}{180000}\boldsymbol\omega_{\text{corrected}}\\[10pt]
-\theta = ||\delta\boldsymbol\theta||\\[5pt]
-\bold{\hat{u}} = \frac{\delta\boldsymbol\theta}{||\delta\boldsymbol\theta||}\\[5pt]
-\delta\bold q =\left[\cos\left(\frac\theta 2\right), \bold{\hat{u}}\sin\left(\frac\theta 2\right)\right]
+\delta\boldsymbol{\theta} = \text{d}t\frac{\pi}{180000}\boldsymbol{\omega}_{\text{corrected}}\\[10pt]
+\theta = ||\delta\boldsymbol{\theta}||\\[5pt]
+\bold{\hat{u}} = \frac{\delta\boldsymbol{\theta}}{||\delta\boldsymbol{\theta}||}\\[5pt]
+\delta\bold{q} =\left[\cos\left(\frac\theta 2\right), \bold{\hat{u}}\sin\left(\frac\theta 2\right)\right]
 $$
 
 Finally, the attitude estimation is updated by multiplying the current attitude quaternion with the delta quaternion.
+
 $$
-\bold q_{k+1} = \bold q _{k}\otimes\delta\bold q
+\bold{q}_{k+1} = \bold{q} _{k}\otimes\delta\bold{q}
 $$
 
 ## Known limitations / Future improvements
