@@ -38,8 +38,8 @@ Getting this right meant tracking down three separate, non-obvious bugs: the rot
 This project uses a simplified version of the Mahony filter. Raw sensor data is read from the IMU and calibrated giving acceleration and angular velocity vectors:
 
 $$
-\mathbf{a} = [a_x,a_y,a_z]\; (\text{g})\\
-\boldsymbol\omega = [\omega_x, \omega_y, \omega_z]\; (\degree/\text{s})
+\mathbf{a} = [a_x,a_y,a_z] \text{ (g) , }
+\boldsymbol\omega = [\omega_x, \omega_y, \omega_z]\text{ }\degree/\text{s})
 $$
 
 The acceleration vector is normalised to give a unit vector pointing in the **measured** direction of gravity*
@@ -53,9 +53,10 @@ $$
 The current attitude quaternion, $\mathbf{q_k}$, represents the rotation from the body frame to the world frame, and is used to calculate a **predicted** gravity vector based on the world down direction in the body frame:
 
 $$
-\mathbf{\hat{g}}_p = \mathbf{q}^{*}_k\otimes \mathbf{\hat{g}}_w  \otimes \mathbf{q}_k \\[10pt]
-\text {where }\mathbf{\hat{g}}_w= [1,0,0] \text{, the world down vector, and $\mathbf{q} ^*_k$ is the conjugate of $\mathbf{q}_k$}
+\mathbf{\hat{g}}_p = \mathbf{q}^{\*}_k\otimes \mathbf{\hat{g}}_w  \otimes \mathbf{q}_k
 $$
+
+Where $\mathbf{\hat{g}}_w = [1,0,0]$, the world down vector, and $\mathbf{q}^{\*}_k$ is the conjugate of $\mathbf{q}_k$ 
 
 The error is then simply the cross product of the measured and predicted gravity vectors:
 
@@ -76,9 +77,15 @@ The corrected gyro measurements are integrated and used to construct the delta q
 $\text{d}t$ is converted from $\text{ms}$ to $\text{s}$
 
 $$
-\delta\boldsymbol{\theta} = \text{d}t\frac{\pi}{180000}\boldsymbol{\omega}_{\text{corrected}}\\[10pt]
-\theta = \|\delta\boldsymbol{\theta}\|\\[5pt]
-\bold{\hat{u}} = \frac{\delta\boldsymbol{\theta}}{\|\delta\boldsymbol{\theta}\|}\\[5pt]
+\delta\boldsymbol{\theta} = \text{d}t\frac{\pi}{180000}\boldsymbol{\omega}_{\text{corrected}}
+$$
+$$
+\theta = \|\delta\boldsymbol{\theta}\|
+$$
+$$
+\mathbf{\hat{u}} = \frac{\delta\boldsymbol{\theta}}{\|\delta\boldsymbol{\theta}\|}
+$$
+$$
 \delta\mathbf{q} =\left[\cos\left(\frac\theta 2\right), \mathbf{\hat{u}}\sin\left(\frac\theta 2\right)\right]
 $$
 
