@@ -1,0 +1,13 @@
+{
+    "script": "misra.py",
+    "args": [
+        "--style"
+    ],
+    "appendix": [
+        "Rule 10.3: The value of an expression shall not be implicitly converted to a different type",
+        "Rule 14.4: The controlling expression of an if-statement shall have an essentially boolean type",
+        "Rule 11.4: A conversion should not be performed between a pointer to object type and a different pointer to object type",
+        "Rule 15.5: A function should have a single point of exit at the end of the function",
+        "Rule 17.7: The value returned by a function having non-void return type shall be utilized"
+    ]
+}
