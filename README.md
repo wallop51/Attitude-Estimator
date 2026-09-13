@@ -102,10 +102,10 @@ $$
 - Proportional-only correction (no integral term)
 - CSV telemetry rather than binary framing
 - Currently uses ```HAL_GetTick()``` for timing which has a 1ms resolution
-    - This is sufficient at the current 100Hz sample rate, but a hardware timer will be needed for 
+    - This is sufficient at the current 100Hz sample rate, but a hardware timer will be needed for faster sample rates to reduce integration jitter.
 
 ## Hardware
-This project uses an STM32-F401RE dev board and a MPU6050 breakout board wired as such:
+This project uses an STM32-F401RE (ARM Cortex-M4) dev board interfacing with an MPU6050 breakout board over I2C wired as such:
 ```
 STM32   | MPU6050
 -----------------
