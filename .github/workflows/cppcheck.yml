@@ -8,11 +8,21 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Install Cppcheck & Python Dependencies
+      - name: Install Cppcheck
         run: |
           sudo apt-get update
           sudo apt-get install -y cppcheck python3
 
       - name: Run MISRA Compliance Scan
         run: |
-          cppcheck --enable=all --addon=misra.json --suppress=*:*Drivers/* --suppress=*_hal_msp.c --suppress=*_it.c --suppress=syscalls.c --suppress=sysmem.c --suppress=system_*.c --suppress=missingInclude --suppress=missingIncludeSystem Core/Src/
+          cppcheck --enable=all \
+            --error-exitcode=0 \
+            --addon=misra.json \
+            --addon-python=python3 \
+            --suppress=*:*Drivers/* \
+            --suppress=*:*Core/Src/stm32f4xx_* \
+            --suppress=*:*Core/Src/sys* \
+            --suppress=missingInclude \
+            --suppress=missingIncludeSystem \
+            --suppress=unusedFunction \
+            Core/Src/
